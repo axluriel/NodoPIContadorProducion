@@ -1,0 +1,39 @@
+[Unit]
+Description=NodoPIContadorProducion — contador de producción
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nodocontador
+Group=nodocontador-netadmin
+SupplementaryGroups=gpio
+# lgpio crea sus FIFO de notificaciones .lgd-nfy-* en el directorio actual.
+# /opt contiene código de solo lectura, por lo que se usa un directorio efímero
+# propiedad del usuario del servicio.
+RuntimeDirectory=NodoPIContadorProducion-gpio
+RuntimeDirectoryMode=0750
+WorkingDirectory=/run/NodoPIContadorProducion-gpio
+ExecStart=/opt/NodoPIContadorProducion/.venv/bin/python -m nodocontador
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+Environment=PYTHONUNBUFFERED=1
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+Environment=CONTADOR_DATA_DIR=/var/lib/NodoPIContador
+Environment=CONTADOR_HOST=127.0.0.1
+Environment=CONTADOR_PORT=5000
+LoadCredential=network-admin-token:/etc/NodoPIContador/network-admin-token
+StateDirectory=NodoPIContador
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

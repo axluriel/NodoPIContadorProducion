@@ -1,0 +1,11 @@
+[Unit]
+Description=Actualización automática de NodoPIContador Python
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

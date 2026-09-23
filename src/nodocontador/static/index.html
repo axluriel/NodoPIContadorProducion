@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contador de producción</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/app.css?v=c19e481e1a">
+</head>
+<body>
+<header>
+  <div><p class="eyebrow" id="node-name">NODO CONTADOR</p><h1 id="line-name">Contador de producción</h1></div>
+  <div class="header-actions"><span id="gpio-badge" class="badge warn">GPIO…</span><span id="central-badge" class="badge warn">CENTRAL…</span></div>
+</header>
+
+<main>
+  <section class="counter-hero">
+    <article class="panel counter-main">
+      <p class="eyebrow">UNIDADES DEL TURNO</p>
+      <div id="shift-units" class="counter-value">0</div>
+      <span id="counter-state" class="badge warn counter-state">INICIANDO</span>
+      <div id="target-wrap" class="hidden" style="width:100%">
+        <div class="progress"><div id="target-bar"></div></div>
+        <small id="target-text"></small>
+      </div>
+    </article>
+    <div class="counter-side">
+      <article class="panel"><span class="muted">Último minuto</span><strong id="rate-minute">0</strong><small>unidades/min</small></article>
+      <article class="panel"><span class="muted">Promedio 10 min</span><strong id="rate-average">0</strong><small>unidades/min</small></article>
+      <article class="panel"><span class="muted">Sensor</span><strong><span id="sensor-dot" class="sensor-dot"></span><span id="sensor-text">—</span></strong><small id="sensor-info">—</small></article>
+      <article class="panel"><span class="muted">Última pieza</span><strong id="last-piece">—</strong><small id="idle-text">—</small></article>
+      <article class="panel"><span class="muted">Parada en el turno</span><strong id="shift-stop">0 min</strong><small id="stop-since">—</small></article>
+      <article class="panel"><span class="muted">Total acumulado</span><strong id="total-units">0</strong><small id="filtered">0 pulsos filtrados</small></article>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="heading">
+      <div><p class="eyebrow">TURNO</p><h2 id="shift-title">Turno</h2></div>
+      <div class="actions">
+        <button id="simulate" class="secondary hidden" type="button">Simular pieza</button>
+        <button id="new-shift" type="button">Cerrar turno y reiniciar</button>
+      </div>
+    </div>
+    <p id="shift-message" class="muted">Los turnos también se cierran solos en los horarios configurados.</p>
+  </section>
+
+  <section class="panel">
+    <div class="heading"><div><p class="eyebrow">PRODUCCIÓN</p><h2>Unidades por hora</h2></div>
+      <select id="hours" style="width:auto"><option value="12">12 h</option><option value="24" selected>24 h</option><option value="72">72 h</option><option value="168">7 días</option></select></div>
+    <div id="bars" class="bars"></div>
+    <div class="bar-labels"><span id="bars-from">—</span><span id="bars-peak">—</span><span id="bars-to">—</span></div>
+    <details><summary>Turnos recientes</summary><div class="table-wrap"><table><thead><tr><th>#</th><th>Inicio</th><th>Fin</th><th>Unidades</th><th>Cierre</th></tr></thead><tbody id="shifts"></tbody></table></div></details>
+    <details><summary>Paradas recientes</summary><div class="table-wrap"><table><thead><tr><th>Turno</th><th>Desde</th><th>Hasta</th><th>Duración</th></tr></thead><tbody id="stops"></tbody></table></div></details>
+  </section>
+
+  <section class="metrics panel" style="background:none;border:0;padding:0">
+    <article><span>CPU</span><strong id="cpu">—</strong></article>
+    <article><span>Memoria</span><strong id="memory">—</strong></article>
+    <article><span>Temperatura</span><strong id="temperature">—</strong></article>
+    <article><span>Encendido</span><strong id="uptime">—</strong></article>
+  </section>
+
+  <section class="panel">
+    <div class="heading"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Sensor, turnos y central</h2></div><button id="open-config" class="secondary" type="button">Modificar parámetros</button></div>
+    <p class="muted">GPIO del sensor fotoeléctrico, filtros de pulso, meta, horarios de turno y enlace con la central.</p>
+    <dialog id="config-dialog" aria-labelledby="config-title">
+      <div class="dialog-heading"><div><p class="eyebrow">NODO CONTADOR</p><h2 id="config-title">Configuración</h2></div><button id="close-config" class="icon-button secondary" type="button" aria-label="Cerrar">×</button></div>
+      <form id="settings-form" class="form-grid">
+        <label class="check wide"><input id="enabled" type="checkbox"> Contador habilitado</label>
+        <label>Nombre del nodo<input id="node" maxlength="60"></label>
+        <label>Línea de producción<input id="line" maxlength="60" placeholder="Línea 1 - Envasado"></label>
+        <h3 class="wide">Sensor fotoeléctrico</h3>
+        <label>GPIO del sensor (BCM)<select id="sensor-pin"></select></label>
+        <label>Modo de entrada<select id="input-mode">
+          <option value="InputPullUp">Pull-up interno (sensor NPN / contacto a GND)</option>
+          <option value="InputPullDown">Pull-down interno (señal a 3,3 V)</option>
+          <option value="Input">Sin resistencia (optoacoplador con su propia resistencia)</option>
+        </select></label>
+        <label>Nivel que indica pieza<select id="active-high"><option value="false">Bajo (0 V)</option><option value="true">Alto (3,3 V)</option></select></label>
+        <label>Unidades por pulso<input id="units" type="number" min="1" max="10000"></label>
+        <label>Antirrebote / separación mínima (ms)<input id="debounce" type="number" min="0" max="10000"></label>
+        <label>Pulso mínimo (ms, 0 = sin filtro)<input id="min-pulse" type="number" min="0" max="10000"></label>
+        <h3 class="wide">Línea y turnos</h3>
+        <label>Segundos sin piezas para marcar parada<input id="stop-seconds" type="number" min="5" max="86400"></label>
+        <label>Meta por turno (0 = sin meta)<input id="target" type="number" min="0"></label>
+        <label>Salida al cumplir la meta (BCM)<select id="target-pin"></select></label>
+        <label>Salida de línea parada (BCM)<select id="stop-pin"></select></label>
+        <label class="wide">Inicio de turnos (HH:MM separados por coma, vacío = solo manual)<input id="shifts-input" placeholder="06:00, 14:00, 22:00"></label>
+        <h3 class="wide">Central (opcional)</h3>
+        <label class="wide">URL central<input id="central-url" placeholder="http://10.0.0.20:8080"></label>
+        <label>NodoId<input id="node-id" type="number" min="0"></label>
+        <label>Envío cada (s)<input id="sync-seconds" type="number" min="5" max="3600"></label>
+        <label>Clave del nodo<input id="central-key" type="password" autocomplete="off"></label>
+        <label>Clave de consulta<input id="query-key" type="password" autocomplete="off"></label>
+        <div class="dialog-actions wide">
+          <button id="test-central" class="secondary" type="button">Probar conexión central</button>
+          <button type="submit">Guardar</button>
+        </div>
+        <div id="settings-message" class="wide muted test-result"></div>
+      </form>
+    </dialog>
+  </section>
+
+  <section class="panel">
+    <div class="heading"><div><p class="eyebrow">RASPBERRY PI</p><h2>Red y conectividad</h2></div><div class="actions"><button id="open-network-config" class="secondary" type="button">Configurar red</button><span id="network-badge" class="badge warn">BLOQUEADO</span></div></div>
+    <p class="muted">Administra Wi-Fi y Ethernet desde una ventana protegida con el token de red.</p>
+    <dialog id="network-dialog" aria-labelledby="network-dialog-title">
+      <div class="dialog-heading"><div><p class="eyebrow">RASPBERRY PI</p><h2 id="network-dialog-title">Configurar Wi-Fi y Ethernet</h2></div><button id="close-network-config" class="icon-button secondary" type="button" aria-label="Cerrar">×</button></div>
+      <p class="network-warning">Los cambios se revierten automáticamente si el navegador no logra confirmarlos en 60 segundos. No cierres esta página mientras se aplica una configuración.</p>
+      <div id="network-login" class="network-login">
+        <label>Token administrativo de red<input id="network-token" type="password" autocomplete="off" placeholder="Token generado durante la instalación"></label>
+        <button id="network-unlock" type="button">Desbloquear</button>
+      </div>
+      <p id="network-message" class="muted"></p>
+      <div id="network-controls" class="hidden">
+        <div class="heading network-actions"><h3>Interfaces</h3><button id="network-refresh" class="secondary" type="button">Actualizar estado</button></div>
+        <div id="network-devices" class="network-devices"></div>
+        <div class="network-columns">
+          <form id="wifi-form" class="network-card">
+            <div class="heading"><h3>Wi-Fi · wlan0</h3><button id="wifi-scan" class="secondary" type="button">Buscar redes</button></div>
+            <label>Red disponible<select id="wifi-list"><option value="">Selecciona o escribe el SSID…</option></select></label>
+            <label>SSID<input id="wifi-ssid" maxlength="32" required></label>
+            <label>Contraseña<input id="wifi-password" type="password" minlength="8" maxlength="63" autocomplete="new-password"></label>
+            <label class="check"><input id="wifi-hidden" type="checkbox"> Red oculta</label>
+            <button type="submit">Conectar Wi-Fi</button>
+          </form>
+          <form id="ethernet-form" class="network-card">
+            <h3>Ethernet · eth0</h3>
+            <label>Método<select id="eth-method"><option value="auto">DHCP automático</option><option value="manual">IPv4 manual</option></select></label>
+            <div id="eth-manual" class="hidden">
+              <label>Direcciones IPv4, una por línea<textarea id="eth-addresses" rows="4" placeholder="192.168.1.50/24&#10;10.20.0.50/16"></textarea></label>
+              <label>Puerta de enlace<input id="eth-gateway" placeholder="192.168.1.1"></label>
+              <label>DNS, uno por línea<textarea id="eth-dns" rows="2" placeholder="1.1.1.1&#10;8.8.8.8"></textarea></label>
+            </div>
+            <p class="muted">La Pi Zero W necesita un adaptador USB Ethernet o HAT para disponer de eth0.</p>
+            <button type="submit">Aplicar en eth0</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+  </section>
+</main>
+<footer>NodoPIContadorProducion</footer>
+<script src="/static/app.js?v=954cc82aec"></script>
+</body>
+</html>
