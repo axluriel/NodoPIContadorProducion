@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contador de producción</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/app.css?v=c19e481e1a">
+  <link rel="stylesheet" href="/static/app.css?v=78bac1c457">
 </head>
 <body>
 <header>
   <div><p class="eyebrow" id="node-name">NODO CONTADOR</p><h1 id="line-name">Contador de producción</h1></div>
-  <div class="header-actions"><span id="gpio-badge" class="badge warn">GPIO…</span><span id="central-badge" class="badge warn">CENTRAL…</span></div>
+  <div class="header-actions"><button id="open-gpio-map" class="secondary" type="button">Ver mapa GPIO</button><span id="gpio-badge" class="badge warn">GPIO…</span><span id="central-badge" class="badge warn">CENTRAL…</span></div>
 </header>
 
 <main>
@@ -141,7 +141,19 @@
     </dialog>
   </section>
 </main>
+
+<dialog id="gpio-dialog" aria-labelledby="gpio-title">
+  <div class="dialog-heading">
+    <div><p class="eyebrow">CONECTOR J8</p><h2 id="gpio-title">Mapa GPIO de 40 pines</h2><p class="muted">Raspberry Pi Zero W · numeración física y BCM</p></div>
+    <button id="close-gpio-map" class="icon-button secondary" type="button" aria-label="Cerrar">×</button>
+  </div>
+  <div class="gpio-summary"><span id="gpio-driver" class="badge warn">GPIO —</span><span id="gpio-count" class="muted">—</span></div>
+  <div class="gpio-legend" aria-label="Leyenda"><span><i class="pin-key power3"></i>3.3 V</span><span><i class="pin-key power5"></i>5 V</span><span><i class="pin-key ground"></i>GND</span><span><i class="pin-key gpio"></i>GPIO libre</span><span><i class="pin-key sensor"></i>Sensor</span><span><i class="pin-key output"></i>Salida del contador</span></div>
+  <div class="pin-orientation"><span>Borde de la placa</span><span>USB / HDMI →</span></div>
+  <div id="gpio-map" class="gpio-map" aria-label="Distribución física del conector GPIO"></div>
+  <p class="map-note">El número grande es el pin físico; BCM es el número que se elige en la configuración. El sensor va al GPIO resaltado en verde a través del optoacoplador, y el emisor del optoacoplador a cualquier GND. Nunca conecte 12–24 V directo a un pin: los GPIO son de 3,3 V.</p>
+</dialog>
 <footer>NodoPIContadorProducion</footer>
-<script src="/static/app.js?v=954cc82aec"></script>
+<script src="/static/app.js?v=7eebbc5432"></script>
 </body>
 </html>

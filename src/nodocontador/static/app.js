@@ -95,9 +95,101 @@ async function refreshSystem() {
       data.gpio.available ? (data.gpio.mock ? 'warn' : 'good') : 'bad');
     $('simulate').classList.toggle('hidden', !data.gpio.mock);
     fillPins(data.gpio.pins);
+    gpioSnapshot = data.gpio;
   } catch (error) {
     badge('gpio-badge', 'SIN ESTADO', 'bad');
   }
+}
+
+const pinout = [
+  {physical:1, label:'3.3 V', type:'power3'}, {physical:2, label:'5 V', type:'power5'},
+  {physical:3, bcm:2}, {physical:4, label:'5 V', type:'power5'},
+  {physical:5, bcm:3}, {physical:6, label:'GND', type:'ground'},
+  {physical:7, bcm:4}, {physical:8, bcm:14},
+  {physical:9, label:'GND', type:'ground'}, {physical:10, bcm:15},
+  {physical:11, bcm:17}, {physical:12, bcm:18},
+  {physical:13, bcm:27}, {physical:14, label:'GND', type:'ground'},
+  {physical:15, bcm:22}, {physical:16, bcm:23},
+  {physical:17, label:'3.3 V', type:'power3'}, {physical:18, bcm:24},
+  {physical:19, bcm:10}, {physical:20, label:'GND', type:'ground'},
+  {physical:21, bcm:9}, {physical:22, bcm:25},
+  {physical:23, bcm:11}, {physical:24, bcm:8},
+  {physical:25, label:'GND', type:'ground'}, {physical:26, bcm:7},
+  {physical:27, bcm:0, alternate:'ID_SD'}, {physical:28, bcm:1, alternate:'ID_SC'},
+  {physical:29, bcm:5}, {physical:30, label:'GND', type:'ground'},
+  {physical:31, bcm:6}, {physical:32, bcm:12},
+  {physical:33, bcm:13}, {physical:34, label:'GND', type:'ground'},
+  {physical:35, bcm:19}, {physical:36, bcm:16},
+  {physical:37, bcm:26}, {physical:38, bcm:20},
+  {physical:39, label:'GND', type:'ground'}, {physical:40, bcm:21}
+];
+
+let gpioSnapshot = {available: false, pins: []};
+
+// Qué hace el contador con cada pin, según la configuración guardada.
+function counterAssignments() {
+  const c = lastConfig;
+  const roles = new Map();
+  if (!c || !c.Habilitado) return roles;
+  roles.set(Number(c.PinSensor), {kind:'sensor', label:'Sensor fotoeléctrico'});
+  if (c.PinSalidaMeta > 0) roles.set(Number(c.PinSalidaMeta), {kind:'output', label:'Salida meta cumplida'});
+  if (c.PinSalidaParada > 0) roles.set(Number(c.PinSalidaParada), {kind:'output', label:'Salida línea parada'});
+  return roles;
+}
+
+function renderGpio(gpio = gpioSnapshot) {
+  gpioSnapshot = gpio;
+  const states = new Map((gpio.pins || []).map(pin => [pin.bcm, pin]));
+  const roles = counterAssignments();
+  const configured = (gpio.pins || []).filter(pin => pin.configured).length;
+  badge('gpio-driver', gpio.available ? (gpio.mock ? 'GPIO SIMULADO' : 'GPIO DISPONIBLE') : 'GPIO NO DISPONIBLE',
+    gpio.available ? (gpio.mock ? 'warn' : 'good') : 'bad');
+  txt('gpio-count', `${configured} configurado${configured === 1 ? '' : 's'}`);
+
+  const cells = pinout.map(pin => {
+    const state = pin.bcm === undefined ? null : states.get(pin.bcm);
+    const role = pin.bcm === undefined ? null : roles.get(pin.bcm);
+    const cell = document.createElement('div');
+    const type = pin.type || 'gpio';
+    cell.className = `gpio-pin ${type}${state?.configured ? ' configured' : ''}${state?.high ? ' high' : ''}${role ? ` ${role.kind}` : ''}${pin.bcm !== undefined && !state ? ' reserved' : ''}`;
+
+    const number = document.createElement('strong');
+    number.className = 'physical-number';
+    number.textContent = pin.physical;
+    const description = document.createElement('span');
+    description.className = 'pin-description';
+    const title = document.createElement('b');
+    title.textContent = pin.bcm === undefined ? pin.label : `BCM${pin.bcm}`;
+    const detail = document.createElement('small');
+    if (role) {
+      detail.textContent = `${role.label} · ${state?.configured ? (state.high ? 'ALTO' : 'BAJO') : 'sin configurar'}`;
+    } else if (state?.configured) {
+      detail.textContent = `${state.mode} · ${state.high ? 'ALTO' : 'BAJO'}`;
+    } else if (pin.alternate) {
+      detail.textContent = `${pin.alternate} · reservado`;
+    } else if (pin.bcm !== undefined && !state) {
+      detail.textContent = 'Reservado por el sistema';
+    } else if (state) {
+      detail.textContent = 'Libre';
+    } else {
+      detail.textContent = 'Alimentación';
+    }
+    description.append(title, detail);
+    cell.append(number, description);
+    cell.title = `Pin físico ${pin.physical}${pin.bcm === undefined ? ` · ${pin.label}` : ` · BCM${pin.bcm}`}${role ? ` · ${role.label}` : ''}`;
+    return cell;
+  });
+  $('gpio-map').replaceChildren(...cells);
+}
+
+// Con el mapa abierto el estado de los pines se relee cada segundo, para ver
+// el sensor cambiar de ALTO a BAJO al cortar el haz con la mano.
+async function refreshGpioMap() {
+  if (!$('gpio-dialog').open) return;
+  try {
+    const data = await api('/api/status');
+    renderGpio(data.gpio);
+  } catch (error) { badge('gpio-driver', error.message, 'bad'); }
 }
 
 let pinsFilled = false;
@@ -146,6 +238,8 @@ function setupDialog(openId, dialogId, closeIds) {
 }
 setupDialog('open-config', 'config-dialog', ['close-config']);
 setupDialog('open-network-config', 'network-dialog', ['close-network-config']);
+setupDialog('open-gpio-map', 'gpio-dialog', ['close-gpio-map']);
+$('open-gpio-map').addEventListener('click', () => { renderGpio(); refreshGpioMap(); });
 
 $('open-config').addEventListener('click', () => {
   const c = lastConfig;
@@ -317,3 +411,4 @@ refreshProduction();
 setInterval(refreshCounter, 1000);
 setInterval(refreshSystem, 10000);
 setInterval(refreshProduction, 60000);
+setInterval(refreshGpioMap, 1000);

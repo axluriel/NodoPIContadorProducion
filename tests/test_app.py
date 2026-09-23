@@ -1,4 +1,5 @@
 import hashlib
+import re
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,16 @@ def test_static_assets_are_cache_busted_by_content():
         assert f"/static/{name}?v={digest}" in html, (
             f"{name} cambió: en index.html poné /static/{name}?v={digest}"
         )
+
+
+def test_panel_has_the_40_pin_gpio_map():
+    """El mapa del conector es la guía para cablear el sensor en la Pi."""
+    static = Path("src/nodocontador/static")
+    html = (static / "index.html").read_text("utf-8")
+    script = (static / "app.js").read_text("utf-8")
+    assert 'id="open-gpio-map"' in html and 'id="gpio-map"' in html
+    physical = [int(n) for n in re.findall(r"\{physical:(\d+)", script)]
+    assert physical == list(range(1, 41))
 
 
 @pytest.fixture
