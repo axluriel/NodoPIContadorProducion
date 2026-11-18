@@ -3,15 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MaxEffi · Contador de producción</title>
-  <meta name="theme-color" content="#07101e">
-  <link rel="icon" type="image/svg+xml" href="/static/maxeffi-logo.svg">
-  <link rel="stylesheet" href="/static/app.css?v=maxeffi-20261118">
+  <title>Contador de producción</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/app.css?v=78bac1c457">
 </head>
 <body>
-<header class="topbar">
-  <a class="maxeffi-brand" href="/" aria-label="MaxEffi"><img src="/static/maxeffi-logo.svg" alt="MaxEffi"></a>
-  <div class="header-context"><p class="eyebrow" id="node-name">NODO CONTADOR</p><h1 id="line-name">Contador de producción</h1></div>
+<header>
+  <div><p class="eyebrow" id="node-name">NODO CONTADOR</p><h1 id="line-name">Contador de producción</h1></div>
   <div class="header-actions"><button id="open-gpio-map" class="secondary" type="button">Ver mapa GPIO</button><span id="gpio-badge" class="badge warn">GPIO…</span><span id="central-badge" class="badge warn">CENTRAL…</span></div>
 </header>
 
@@ -155,7 +153,7 @@
   <div id="gpio-map" class="gpio-map" aria-label="Distribución física del conector GPIO"></div>
   <p class="map-note">El número grande es el pin físico; BCM es el número que se elige en la configuración. El sensor va al GPIO resaltado en verde a través del optoacoplador, y el emisor del optoacoplador a cualquier GND. Nunca conecte 12–24 V directo a un pin: los GPIO son de 3,3 V.</p>
 </dialog>
-<footer><img src="/static/maxeffi-logo.svg" alt="MaxEffi"><span>MaxEffi · Nodo de producción · Raspberry Pi</span></footer>
+<footer>NodoPIContadorProducion</footer>
 <script src="/static/app.js?v=7eebbc5432"></script>
 </body>
 </html>
