@@ -35,6 +35,9 @@ def rig(tmp_path, monkeypatch):
         gpio = GpioService(tmp_path / "gpio.json")
         store = CounterStore(tmp_path / "contador.db")
         counter = ProductionCounter(gpio, settings, store, clock=lambda: clock.value, wall=lambda: clock.wall)
+        # La base abre el primer turno con la hora real del runner. Alinearlo
+        # con el reloj simulado evita que la prueba dependa de la fecha actual.
+        counter._shift_start = clock.wall
         gpio.add_callback(counter.on_edge)
         counter.apply_configuration()
         return counter, gpio, store
